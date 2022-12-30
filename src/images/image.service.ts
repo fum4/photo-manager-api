@@ -14,11 +14,11 @@ export class ImageService {
     @InjectModel(Image.name) private imageModel: Model<ImageDocument>,
   ) {}
 
-  getImages = async (): Promise<Image[]> => {
-    return this.imageModel.find().exec();
+  findAll = async (): Promise<Image[]> => {
+    return await this.imageModel.find().sort({ $natural: -1 }).exec();
   };
 
-  addImage = async (payload: Pick<Image, 'name' | 'content' | 'tags'>) => {
+  addOne = async (payload: Pick<Image, 'name' | 'content' | 'tags'>) => {
     const fileExtension = payload.content.slice(
       payload.content.indexOf('/') + 1,
       payload.content.indexOf(';'),
@@ -26,11 +26,11 @@ export class ImageService {
 
     const systemTag: Tag = {
       label: fileExtension,
-      system: true,
+      isSystemTag: true,
     };
 
     const deduplicatedTags = uniqBy(
-      [ systemTag, ...payload.tags.filter(({ system }) => !system) ],
+      [ systemTag, ...payload.tags.filter(({ isSystemTag }) => !isSystemTag) ],
       'label'
     );
 
@@ -45,30 +45,29 @@ export class ImageService {
     return { _id, tags, createdAt };
   };
 
-  updateImage = async (_id: string, payload: Partial<Image>) => {
+  updateOne = async (_id: string, payload: Partial<Image>) => {
     const { tags, ...rest } = payload;
 
     const image = await this.imageModel.findById(_id);
 
-    const systemTags = image.tags.filter((tag) => tag.system);
-    const updatedTags = tags.filter((tag) => tag?.label && !tag.system);
+    const systemTags = image.tags.filter((tag) => tag.isSystemTag);
+    const updatedTags = tags.filter((tag) => tag?.label && !tag.isSystemTag);
 
     await this.imageModel.updateOne(
       { _id },
       {
         $set: {
-          tags: uniqBy([ ...systemTags, ...updatedTags ], 'label'),
+          tags: uniqBy(
+            [ ...systemTags, ...updatedTags ],
+            'label'
+          ),
           ...rest,
         },
       },
     );
-
-    return { _id };
   };
 
-  removeImage = async (_id: string) => {
-    await this.imageModel.remove({ _id });
-
-    return { _id };
+  deleteOne = async (_id: string) => {
+    await this.imageModel.deleteOne({ _id });
   };
 }

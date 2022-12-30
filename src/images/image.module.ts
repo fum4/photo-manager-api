@@ -9,7 +9,7 @@ import { Image, ImageSchema } from './image.schema';
   imports: [
     MongooseModule.forFeature([{ name: Image.name, schema: ImageSchema }]),
   ],
-  controllers: [ImageController],
-  providers: [ImageService],
+  controllers: [ ImageController ],
+  providers: [ ImageService ],
 })
 export class ImageModule {}

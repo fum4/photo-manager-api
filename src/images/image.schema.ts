@@ -3,7 +3,7 @@ import type { HydratedDocument } from 'mongoose';
 
 export interface Tag {
   label: string;
-  system?: boolean;
+  isSystemTag?: boolean;
 }
 
 export type ImageDocument = HydratedDocument<Image>;

@@ -10,8 +10,8 @@ const project = 'nestjs-images';
 const mongoUrl = `mongodb+srv://${username}:${password}@cluster0.iob1cqi.mongodb.net/${project}?retryWrites=true&w=majority`;
 
 @Module({
-  imports: [ImageModule, MongooseModule.forRoot(mongoUrl)],
-  controllers: [AppController],
-  providers: [],
+  imports: [ ImageModule, MongooseModule.forRoot(mongoUrl) ],
+  controllers: [ AppController ],
 })
+
 export class AppModule {}

@@ -16,22 +16,22 @@ export class ImageController {
   constructor(private readonly imageService: ImageService) {}
 
   @Get()
-  getImages() {
-    return this.imageService.getImages();
+  findAll() {
+    return this.imageService.findAll();
   }
 
   @Post()
-  addImage(@Body() payload: Pick<Image, 'name' | 'content' | 'tags'>) {
-    return this.imageService.addImage(payload);
+  addOne(@Body() payload: Pick<Image, 'name' | 'content' | 'tags'>) {
+    return this.imageService.addOne(payload);
   }
 
   @Put(':id')
-  updateImage(@Param('id') _id: string, @Body() payload: Partial<Image>) {
-    return this.imageService.updateImage(_id, payload);
+  updateOne(@Param('id') _id: string, @Body() payload: Partial<Image>) {
+    return this.imageService.updateOne(_id, payload);
   }
 
   @Delete(':id')
-  removeImage(@Param('id') _id: string) {
-    return this.imageService.removeImage(_id);
+  deleteOne(@Param('id') _id: string) {
+    return this.imageService.deleteOne(_id);
   }
 }
