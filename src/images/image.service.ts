@@ -29,10 +29,15 @@ export class ImageService {
       system: true,
     };
 
+    const deduplicatedTags = uniqBy(
+      [ systemTag, ...payload.tags.filter(({ system }) => !system) ],
+      'label'
+    );
+
     const image = new this.imageModel({
       name: payload.name,
       content: payload.content,
-      tags: uniqBy([systemTag, ...payload.tags], 'label'),
+      tags: deduplicatedTags,
     });
 
     const { _id, tags, createdAt } = await image.save();
@@ -52,7 +57,7 @@ export class ImageService {
       { _id },
       {
         $set: {
-          tags: uniqBy([...systemTags, ...updatedTags], 'label'),
+          tags: uniqBy([ ...systemTags, ...updatedTags ], 'label'),
           ...rest,
         },
       },
