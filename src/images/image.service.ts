@@ -1,18 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import type { Connection, Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import type { Model } from 'mongoose';
 import { uniqBy } from 'lodash';
 
 import { Image, type ImageDocument, type Tag } from './image.schema';
 
 @Injectable()
 export class ImageService {
-  images: Image[] = [];
+  constructor(@InjectModel(Image.name) private imageModel: Model<ImageDocument>) {}
 
-  constructor(
-    @InjectConnection() private connection: Connection,
-    @InjectModel(Image.name) private imageModel: Model<ImageDocument>,
-  ) {}
+  images: Image[] = [];
 
   findAll = async (): Promise<Image[]> => {
     return await this.imageModel.find().sort({ $natural: -1 }).exec();
