@@ -3,4 +3,7 @@
 
 <hr/>
 
-### Setup: ``npm i && npm start``
+### Commands
+
+#### ``npm start`` - Run with production DB (persistent)
+#### ``npm run start:dev`` - Run with sandbox DB (ephemeral)
