@@ -21,8 +21,7 @@ export class AuthService {
   ) {}
 
   async authenticate(token: string, provider?: AuthProvider) {
-    // @ts-ignore
-    const { userId } = this.jwtService.decode(token);
+    const { userId } = this.jwtService.decode(token) as { userId: string };
 
     if (userId) {
       const user = await this.userService.getById(userId);
@@ -56,6 +55,7 @@ export class AuthService {
 
     return {
       userId: user._id,
+      username: user.name,
       accessToken,
       refreshToken
     }
