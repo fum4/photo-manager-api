@@ -1,37 +1,43 @@
-import {
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  Controller,
-} from '@nestjs/common';
+import { Get, Post, Put, Delete, Param, Body, Controller } from '@nestjs/common';
 
+import { AuthService } from '../auth/auth.service';
 import { ImageService } from './image.service';
 import { Image } from './image.schema';
 
 @Controller('images')
 export class ImageController {
-  constructor(private readonly imageService: ImageService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly imageService: ImageService
+  ) {}
 
-  @Get()
-  findAll() {
-    return this.imageService.findAll();
+  @Get(':userId')
+  findAll(@Param('userId') userId: string) {
+    return this.imageService.findAll(userId);
   }
 
-  @Post()
-  addOne(@Body() payload: Pick<Image, 'name' | 'content' | 'tags'>) {
-    return this.imageService.addOne(payload);
+  @Post(':userId')
+  addOne(
+    @Param('userId') userId: string,
+    @Body() payload: Pick<Image, 'name' | 'content' | 'tags'>
+  ) {
+    return this.imageService.addOne(userId, payload);
   }
 
-  @Put(':id')
-  updateOne(@Param('id') _id: string, @Body() payload: Partial<Image>) {
-    return this.imageService.updateOne(_id, payload);
+  @Put(':userId/:assetId')
+  updateOne(
+    @Param('userId') userId: string,
+    @Param('assetId') assetId: string,
+    @Body() payload: Partial<Image>
+  ) {
+    return this.imageService.updateOne(userId, assetId, payload);
   }
 
-  @Delete(':id')
-  deleteOne(@Param('id') _id: string) {
-    return this.imageService.deleteOne(_id);
+  @Delete(':userId/:assetId')
+  deleteOne(
+    @Param('userId') userId: string,
+    @Param('assetId') assetId: string
+  ) {
+    return this.imageService.deleteOne(userId, assetId);
   }
 }

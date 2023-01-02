@@ -11,6 +11,9 @@ export type ImageDocument = HydratedDocument<Image>;
 @Schema({ timestamps: true })
 export class Image {
   @Prop()
+  _id: string;
+
+  @Prop()
   name: string;
 
   @Prop()

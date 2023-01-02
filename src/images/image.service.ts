@@ -1,24 +1,32 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import type { Model } from 'mongoose';
+import { Types, type Model } from 'mongoose';
 import { uniqBy } from 'lodash';
 
 import { Image, type ImageDocument, type Tag } from './image.schema';
+import { User, type UserDocument } from '../users/user.schema';
+
+const { ObjectId } = Types;
 
 @Injectable()
 export class ImageService {
-  constructor(@InjectModel(Image.name) private imageModel: Model<ImageDocument>) {}
+  constructor(
+    @InjectModel(Image.name) private imageModel: Model<ImageDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>
+  ) {}
 
-  images: Image[] = [];
+  findAll = async (userId: string): Promise<Image[]> => {
+    const { images } = await this.userModel
+      .findOne({ _id: userId }, { images: 1 })
+      .sort({ $natural: -1 });
 
-  findAll = async (): Promise<Image[]> => {
-    return await this.imageModel.find().sort({ $natural: -1 }).exec();
+    return images;
   };
 
-  addOne = async (payload: Pick<Image, 'name' | 'content' | 'tags'>) => {
+  addOne = async (userId: string, payload: Pick<Image, 'name' | 'content' | 'tags'>) => {
     const fileExtension = payload.content.slice(
       payload.content.indexOf('/') + 1,
-      payload.content.indexOf(';'),
+      payload.content.indexOf(';')
     );
 
     const systemTag: Tag = {
@@ -32,6 +40,7 @@ export class ImageService {
     );
 
     const image = new this.imageModel({
+      _id: new ObjectId(),
       name: payload.name,
       content: payload.content,
       tags: deduplicatedTags,
@@ -39,32 +48,42 @@ export class ImageService {
 
     const { _id, tags, createdAt } = await image.save();
 
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $push: { images: image } }
+    );
+
     return { _id, tags, createdAt };
   };
 
-  updateOne = async (_id: string, payload: Partial<Image>) => {
-    const { tags, ...rest } = payload;
+  updateOne = async (userId: string, assetId: string, payload: Partial<Image>) => {
+    const { tags: payloadTags, ...rest } = payload;
 
-    const image = await this.imageModel.findById(_id);
+    const { images } = await this.userModel.findOne({ _id: userId }, { images: 1 });
+    const imageToUpdate = images.find(({ _id }) => _id === assetId);
 
-    const systemTags = image.tags.filter((tag) => tag.isSystemTag);
-    const updatedTags = tags.filter((tag) => tag?.label && !tag.isSystemTag);
+    const systemTags = imageToUpdate.tags.filter((tag) => tag.isSystemTag);
+    const updatedTags = payloadTags.filter((tag) => tag?.label && !tag.isSystemTag);
 
-    await this.imageModel.updateOne(
-      { _id },
+    await this.userModel.updateOne(
+      { _id: userId },
       {
         $set: {
-          tags: uniqBy(
-            [ ...systemTags, ...updatedTags ],
-            'label'
-          ),
-          ...rest,
-        },
+          'images.$[e]': {
+            ...imageToUpdate,
+            ...rest,
+            tags: uniqBy([ ...systemTags, ...updatedTags ], 'label')
+          }
+        }
       },
+      { arrayFilters: [ { 'e._id': assetId } ] }
     );
   };
 
-  deleteOne = async (_id: string) => {
-    await this.imageModel.deleteOne({ _id });
+  deleteOne = async (userId: string, assetId: string) => {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { images: { _id: assetId } } },
+    );
   };
 }
