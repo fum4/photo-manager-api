@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "npm run start:prod",
+    "start": "NODE_ENV=production nest build --webpack --webpackPath webpack-hmr.config.js --watch",
     "start:dev": "NODE_ENV=development nest build --webpack --webpackPath webpack-hmr.config.js --watch",
     "start:prod": "NODE_ENV=production node ./dist/main.js",
     "build": "npm run build:prod",

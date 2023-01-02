@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 
 declare const module: any;
 
-const allowedOrigins = [ 'https://photo-manager-ui.web.app' ];
+const allowedOrigins = [ 'http://localhost', 'http://localhost:4200', 'https://photo-manager-ui.web.app' ];
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
