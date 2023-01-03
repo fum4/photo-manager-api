@@ -1,15 +1,27 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { OAuth2Client } from 'google-auth-library';
+import { v4 as uuidv4 } from 'uuid';
 
 import { UserService } from '../users/user.service';
-import { User, UserDocument } from '../users/user.schema';
+import { User, type UserDocument } from '../users/user.schema';
 import { AuthProvider } from '../constants';
 
-const googleOauthClient = new OAuth2Client();
+export interface AccessTokenPayload extends OAuthTokenPayload {
+  userId: string;
+  exp: number;
+  iat: number;
+  permissions?: number[];
+  roles?: number[];
+}
+
+interface OAuthTokenPayload {
+  name: string;
+  email: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -18,76 +30,113 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     private readonly userService: UserService
-  ) {}
+  ) {
+    this.googleOauthClient = new OAuth2Client(
+      configService.get('GOOGLE_CLIENT_ID'),
+      configService.get('GOOGLE_CLIENT_SECRET')
+    );
+  }
 
-  async authenticate(token: string, provider?: AuthProvider) {
-    const { userId } = this.jwtService.decode(token) as { userId: string };
+  googleOauthClient;
 
-    if (userId) {
-      const user = await this.userService.getById(userId);
+  async silentLogin(accessToken: string) {
+    const tokenPayload = this.verifyAccessToken(accessToken);
+    await this.userService.getByEmail(tokenPayload.email);
 
-      return this.handleRegisteredUser(user);
-    }
+    return { accessToken: this.getAccessToken(tokenPayload) };
+  }
 
-    const { name, email } = await this.getUserData(token, provider);
+  async login(token: string, provider: AuthProvider) {
+    const tokenPayload = await this.verifyIdToken(token, provider);
 
     try {
-      const user = await this.userService.getByEmail(email);
+      const { _id: userId } = await this.userService.getByEmail(tokenPayload.email);
+      const refreshToken = uuidv4();
+      const accessToken = this.getAccessToken({ ...tokenPayload, userId });
 
-      return this.handleRegisteredUser(user);
+      await this.userService.saveRefreshTokenHash(userId, refreshToken);
+
+      return { accessToken, refreshToken };
     } catch (error) {
-      if (error.status !== HttpStatus.NOT_FOUND) {
-        throw new error;
+      if (error.status === HttpStatus.NOT_FOUND) {
+       return this.register(tokenPayload as Omit<AccessTokenPayload, 'userId'>);
       }
 
-      return this.register(name, email);
+      throw error;
     }
   }
 
-  async register(name: string, email: string) {
-    const user = await this.userService.create(name, email);
+  async register(tokenPayload: Omit<AccessTokenPayload, 'userId'>) {
+    const { _id: userId } = await this.userService.create(tokenPayload.name, tokenPayload.email);
+    const refreshToken = uuidv4();
+    const accessToken = this.getAccessToken(tokenPayload);
+    await this.userService.saveRefreshTokenHash(userId, refreshToken);
 
-    return this.handleRegisteredUser(user);
+    return { accessToken, refreshToken };
   }
 
-  async handleRegisteredUser(user: User) {
-    const { accessToken, refreshToken } = await this.getSessionTokens(user);
+  async logout(accessToken: string) {
+    const { userId } = this.jwtService.decode(accessToken) as AccessTokenPayload;
+    await this.userService.saveRefreshTokenHash(userId, null)
+  }
 
-    return {
-      userId: user._id,
-      username: user.name,
-      accessToken,
-      refreshToken
+  async refreshToken(accessToken: string, refreshToken: string) {
+    const tokenPayload = this.jwtService.decode(accessToken) as AccessTokenPayload;
+
+    if (tokenPayload) {
+      const { _id: userId } = await this.userService.getUserIfRefreshTokenMatches(tokenPayload.userId, refreshToken);
+
+      if (userId) {
+        const refreshToken = uuidv4();
+        const accessToken = this.getAccessToken(tokenPayload);
+        await this.userService.saveRefreshTokenHash(userId, refreshToken);
+
+        return { accessToken, refreshToken };
+      }
+    } else {
+      throw new HttpException('Bad token request', HttpStatus.BAD_REQUEST);
     }
   }
 
-  async getUserData(token: string, provider: AuthProvider) {
-    switch(provider) {
-      case AuthProvider.Google: {
-        const ticket = await googleOauthClient.verifyIdToken({
-          audience: this.configService.get('GOOGLE_CLIENT_ID'),
-          idToken: token
-        });
+  async verifyIdToken(idToken: string, provider: AuthProvider): Promise<OAuthTokenPayload> {
+    try {
+      switch(provider) {
+        case AuthProvider.Google: {
+          const ticket = await this.googleOauthClient.verifyIdToken({
+            idToken,
+            audience: this.configService.get('GOOGLE_CLIENT_ID')
+          });
 
-        return ticket.getPayload();
+          const { name, email } = ticket.getPayload();
+
+          return { name, email };
+        }
       }
+    } catch (error) {
+      throw new HttpException('idToken not valid', HttpStatus.UNAUTHORIZED);
     }
   };
 
-  async getSessionTokens(user: User) {
-    const accessToken = this.jwtService.sign({ userId: user._id }, {
-      secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
-      expiresIn: `${this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME')}s`
-    });
+  verifyAccessToken(accessToken: string) {
+    try {
+      return this.jwtService.verify(accessToken, {
+        secret: this.configService.get('JWT_SECRET')
+      });
+    } catch (error) {
+      throw new HttpException('Authorization token expired', HttpStatus.UNAUTHORIZED);
+    }
+  }
 
-    const refreshToken = this.jwtService.sign({ userId: user._id }, {
-      secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
-      expiresIn: `${this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')}s`
-    });
+  getAccessToken(payload: Partial<AccessTokenPayload>) {
+    const timestamp = (add = 0) => Math.floor(Date.now() / 1000) + add;
+    const jwtTTL = this.configService.get('ACCESS_TOKEN_TTL');
 
-    return {
-      accessToken,
-      refreshToken
-    };
+    return this.jwtService.sign({
+      ...payload,
+      iat: timestamp(),
+      exp: timestamp(+jwtTTL)
+    }, {
+      secret: this.configService.get('JWT_SECRET'),
+    });
   }
 }

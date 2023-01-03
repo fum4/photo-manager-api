@@ -18,13 +18,10 @@ export class User {
   email: string;
 
   @Prop()
-  password?: string;
-
-  @Prop()
   images?: Image[];
 
   @Prop()
-  currentHashedRefreshToken?: string;
+  refreshTokenHash?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

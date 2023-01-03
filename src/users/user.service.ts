@@ -13,7 +13,6 @@ export class UserService {
 
   async create(name: string, email: string) {
     const user = new this.userModel({ _id: new ObjectId(), name, email });
-
     await user.save();
 
     return user;
@@ -26,7 +25,7 @@ export class UserService {
       return user;
     }
 
-    throw new HttpException('User with this email does not exist', HttpStatus.NOT_FOUND);
+    throw new HttpException(`User with email ${email} does not exist`, HttpStatus.NOT_FOUND);
   }
 
   async getById(userId: string) {
@@ -39,27 +38,27 @@ export class UserService {
     throw new HttpException(`User with id ${userId} does not exist`, HttpStatus.NOT_FOUND);
   }
 
-  // TODO
-  async getUserIfRefreshTokenMatches(refreshToken: string, userId: string) {
+  async getUserIfRefreshTokenMatches(userId: string, refreshToken: string) {
     const user = await this.getById(userId);
 
-    const isRefreshTokenMatching = await bcrypt.compare(
+    const isRefreshTokenValid = await bcrypt.compare(
       refreshToken,
-      user.currentHashedRefreshToken
+      user.refreshTokenHash
     );
 
-    if (isRefreshTokenMatching) {
+    if (isRefreshTokenValid) {
       return user;
     }
+
+    throw new HttpException('Refresh token not valid', HttpStatus.UNAUTHORIZED);
   }
 
-  // TODO
-  async setCurrentRefreshToken(refreshToken: string, userId: string) {
-    const currentHashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+  async saveRefreshTokenHash(_id: string, refreshToken: string) {
+    const refreshTokenHash = refreshToken && await bcrypt.hash(refreshToken, 10);
 
     await this.userModel.updateOne(
-      { _id: userId },
-      { currentHashedRefreshToken }
+      { _id },
+      { refreshTokenHash }
     );
   }
 }

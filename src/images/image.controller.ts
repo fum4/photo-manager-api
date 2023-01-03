@@ -1,10 +1,12 @@
-import { Get, Post, Put, Delete, Param, Body, Controller } from '@nestjs/common';
+import { Get, Post, Put, Delete, Param, Body, Controller, UseGuards } from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
+import { AuthGuard } from '../auth/auth.guard';
 import { ImageService } from './image.service';
 import { Image } from './image.schema';
 
 @Controller('images')
+@UseGuards(AuthGuard)
 export class ImageController {
   constructor(
     private readonly authService: AuthService,

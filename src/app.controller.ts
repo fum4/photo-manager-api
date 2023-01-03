@@ -2,7 +2,7 @@ import { Controller, OnModuleDestroy } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
 
-const ephemeralCollections =  process.env.NODE_ENV === 'development' ? [ 'users' ] : [];
+const ephemeralCollections =  process.env.NODE_ENV === 'development' ? [ 'users', 'images' ] : [];
 
 @Controller()
 export class AppController implements OnModuleDestroy {

@@ -15,7 +15,7 @@ export class ImageService {
     @InjectModel(User.name) private userModel: Model<UserDocument>
   ) {}
 
-  findAll = async (userId: string): Promise<Image[]> => {
+  findAll = async(userId: string): Promise<Image[]> => {
     const { images } = await this.userModel
       .findOne({ _id: userId }, { images: 1 })
       .sort({ $natural: -1 });
@@ -23,7 +23,7 @@ export class ImageService {
     return images;
   };
 
-  addOne = async (userId: string, payload: Pick<Image, 'name' | 'content' | 'tags'>) => {
+  addOne = async(userId: string, payload: Pick<Image, 'name' | 'content' | 'tags'>) => {
     const fileExtension = payload.content.slice(
       payload.content.indexOf('/') + 1,
       payload.content.indexOf(';')
@@ -56,7 +56,7 @@ export class ImageService {
     return { _id, tags, createdAt };
   };
 
-  updateOne = async (userId: string, assetId: string, payload: Partial<Image>) => {
+  updateOne = async(userId: string, assetId: string, payload: Partial<Image>) => {
     const { tags: payloadTags, ...rest } = payload;
 
     const { images } = await this.userModel.findOne({ _id: userId }, { images: 1 });
@@ -80,7 +80,7 @@ export class ImageService {
     );
   };
 
-  deleteOne = async (userId: string, assetId: string) => {
+  deleteOne = async(userId: string, assetId: string) => {
     await this.userModel.updateOne(
       { _id: userId },
       { $pull: { images: { _id: assetId } } },

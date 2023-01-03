@@ -1,5 +1,8 @@
+import { ConfigModule } from '@nestjs/config';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { JwtService } from '@nestjs/jwt';
+import * as Joi from '@hapi/joi';
 
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
@@ -15,8 +18,14 @@ const mongoUrl = `mongodb+srv://${username}:${password}@cluster0.iob1cqi.mongodb
     AuthModule,
     UserModule,
     ImageModule,
-    MongooseModule.forRoot(mongoUrl)
+    MongooseModule.forRoot(mongoUrl),
+    ConfigModule.forRoot({
+      validationSchema: Joi.object({
+        JWT_SECRET: Joi.string().required()
+      })
+    }),
   ],
+  providers: [ JwtService ],
   controllers: [ AppController ],
 })
 

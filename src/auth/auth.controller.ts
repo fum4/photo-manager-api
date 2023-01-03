@@ -1,19 +1,36 @@
-import { Post, Body, Controller } from '@nestjs/common';
+import { Post, Body, Controller, Req } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 import { AuthProvider } from '../constants';
+import { getAccessTokenFromRequest } from '../helpers';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/google')
-  async authenticateWithGoogle(@Body('token') token: string) {
-    return this.authService.authenticate(token, AuthProvider.Google);
+  async authenticateWithGoogle(@Body('idToken') idToken: string) {
+    return this.authService.login(idToken, AuthProvider.Google);
   }
 
-  @Post()
-  async authenticate(@Body('token') token: string) {
-    return this.authService.authenticate(token);
+  @Post('/jwt')
+  async silentLogin(@Req() request: Request) {
+    const accessToken = getAccessTokenFromRequest(request);
+    return this.authService.silentLogin(accessToken);
+  }
+
+  @Post('/logout')
+  async logout(@Req() request: Request) {
+    const accessToken = getAccessTokenFromRequest(request);
+    return this.authService.logout(accessToken);
+  }
+
+  @Post('/refresh-token')
+  async refreshToken(
+    @Req() request: Request,
+    @Body('refreshToken') refreshToken: string
+  ) {
+    const accessToken = getAccessTokenFromRequest(request);
+    return this.authService.refreshToken(accessToken, refreshToken);
   }
 }
