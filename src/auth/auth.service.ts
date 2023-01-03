@@ -78,7 +78,7 @@ export class AuthService {
   }
 
   async logout(accessToken: string) {
-    const { userId } = this.jwtService.decode(accessToken) as AccessTokenPayload;
+    const { userId } = this.verifyAccessToken(accessToken);
     await this.userService.saveRefreshTokenHash(userId, null)
   }
 
