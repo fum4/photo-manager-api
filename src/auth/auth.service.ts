@@ -71,7 +71,7 @@ export class AuthService {
   async register(tokenPayload: Omit<AccessTokenPayload, 'userId'>) {
     const { _id: userId } = await this.userService.create(tokenPayload.name, tokenPayload.email);
     const refreshToken = uuidv4();
-    const accessToken = this.getAccessToken(tokenPayload);
+    const accessToken = this.getAccessToken({ ...tokenPayload, userId });
     await this.userService.saveRefreshTokenHash(userId, refreshToken);
 
     return { accessToken, refreshToken };
@@ -85,7 +85,7 @@ export class AuthService {
   async refreshToken(accessToken: string, refreshToken: string) {
     const tokenPayload = this.jwtService.decode(accessToken) as AccessTokenPayload;
 
-    if (tokenPayload) {
+    if (accessToken && refreshToken && tokenPayload.userId) {
       const { _id: userId } = await this.userService.getUserIfRefreshTokenMatches(tokenPayload.userId, refreshToken);
 
       if (userId) {
