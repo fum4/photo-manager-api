@@ -47,9 +47,11 @@ export class AuthService {
   }
 
   async login(token: string, provider: AuthProvider) {
-    const tokenPayload = await this.verifyIdToken(token, provider);
+    let tokenPayload: OAuthTokenPayload;
 
     try {
+      tokenPayload = await this.verifyIdToken(token, provider);
+
       const { _id: userId } = await this.userService.getByEmail(tokenPayload.email);
       const refreshToken = uuidv4();
       const accessToken = this.getAccessToken({ ...tokenPayload, userId });
