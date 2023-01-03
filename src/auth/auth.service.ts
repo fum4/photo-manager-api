@@ -41,22 +41,28 @@ export class AuthService {
 
   async silentLogin(accessToken: string) {
     const tokenPayload = this.verifyAccessToken(accessToken);
-    await this.userService.getByEmail(tokenPayload.email);
+    const refreshToken = uuidv4();
 
-    return { accessToken: this.getAccessToken(tokenPayload) };
+    await this.userService.getById(tokenPayload.userId);
+    await this.userService.saveRefreshToken(tokenPayload.userId, refreshToken);
+
+    return {
+      accessToken: this.getAccessToken(tokenPayload),
+      refreshToken
+    };
   }
 
-  async login(token: string, provider: AuthProvider) {
+  async login(idToken: string, provider: AuthProvider) {
     let tokenPayload: OAuthTokenPayload;
 
     try {
-      tokenPayload = await this.verifyIdToken(token, provider);
+      tokenPayload = await this.verifyIdToken(idToken, provider);
 
       const { _id: userId } = await this.userService.getByEmail(tokenPayload.email);
       const refreshToken = uuidv4();
       const accessToken = this.getAccessToken({ ...tokenPayload, userId });
 
-      await this.userService.saveRefreshTokenHash(userId, refreshToken);
+      await this.userService.saveRefreshToken(userId, refreshToken);
 
       return { accessToken, refreshToken };
     } catch (error) {
@@ -72,26 +78,26 @@ export class AuthService {
     const { _id: userId } = await this.userService.create(tokenPayload.name, tokenPayload.email);
     const refreshToken = uuidv4();
     const accessToken = this.getAccessToken({ ...tokenPayload, userId });
-    await this.userService.saveRefreshTokenHash(userId, refreshToken);
+    await this.userService.saveRefreshToken(userId, refreshToken);
 
     return { accessToken, refreshToken };
   }
 
   async logout(accessToken: string) {
     const { userId } = this.verifyAccessToken(accessToken);
-    await this.userService.saveRefreshTokenHash(userId, null)
+    await this.userService.saveRefreshToken(userId, null)
   }
 
   async refreshToken(accessToken: string, refreshToken: string) {
     const tokenPayload = this.jwtService.decode(accessToken) as AccessTokenPayload;
 
-    if (accessToken && refreshToken && tokenPayload.userId) {
+    if (accessToken && refreshToken && tokenPayload?.userId) {
       const { _id: userId } = await this.userService.getUserIfRefreshTokenMatches(tokenPayload.userId, refreshToken);
 
       if (userId) {
         const refreshToken = uuidv4();
         const accessToken = this.getAccessToken(tokenPayload);
-        await this.userService.saveRefreshTokenHash(userId, refreshToken);
+        await this.userService.saveRefreshToken(userId, refreshToken);
 
         return { accessToken, refreshToken };
       }

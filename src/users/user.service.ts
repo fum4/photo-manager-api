@@ -53,7 +53,7 @@ export class UserService {
     throw new HttpException('Refresh token not valid', HttpStatus.UNAUTHORIZED);
   }
 
-  async saveRefreshTokenHash(_id: string, refreshToken: string) {
+  async saveRefreshToken(_id: string, refreshToken: string) {
     const refreshTokenHash = refreshToken && await bcrypt.hash(refreshToken, 10);
 
     await this.userModel.updateOne(
