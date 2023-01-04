@@ -41,13 +41,15 @@ export class UserService {
   async getUserIfRefreshTokenMatches(userId: string, refreshToken: string) {
     const user = await this.getById(userId);
 
-    const isRefreshTokenValid = await bcrypt.compare(
-      refreshToken,
-      user.refreshTokenHash
-    );
+    if (user.refreshTokenHash) {
+      const isRefreshTokenValid = await bcrypt.compare(
+        refreshToken,
+        user.refreshTokenHash
+      );
 
-    if (isRefreshTokenValid) {
-      return user;
+      if (isRefreshTokenValid) {
+        return user;
+      }
     }
 
     throw new HttpException('Refresh token not valid', HttpStatus.UNAUTHORIZED);
