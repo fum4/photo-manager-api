@@ -136,13 +136,13 @@ export class AuthService {
   }
 
   getAccessToken(payload: Partial<AccessTokenPayload>) {
-    const timestamp = (add = 0) => Math.floor(Date.now() / 1000) + add;
-    const jwtTTL = this.configService.get('ACCESS_TOKEN_TTL');
+    const timestamp = Math.floor(Date.now() / 1000);
+    const jwtTTL = 300;
 
     return this.jwtService.sign({
       ...payload,
-      iat: timestamp(),
-      exp: timestamp(+jwtTTL)
+      iat: timestamp,
+      exp: timestamp + jwtTTL
     }, {
       secret: this.configService.get('JWT_SECRET'),
     });

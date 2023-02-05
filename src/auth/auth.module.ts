@@ -16,7 +16,6 @@ import { UserService } from '../users/user.service';
       validationSchema: Joi.object({
         GOOGLE_CLIENT_ID: Joi.string().required(),
         GOOGLE_CLIENT_SECRET: Joi.string().required(),
-        ACCESS_TOKEN_TTL: Joi.number().required(),
         JWT_SECRET: Joi.string().required()
       })
     }),
