@@ -5,5 +5,5 @@
 
 ### Commands
 
-#### ``npm start`` - Run with production DB (persistent)
-#### ``npm run start:dev`` - Run with sandbox DB (ephemeral)
+#### ``pnpm start`` - Run with production DB (persistent)
+#### ``pnpm run start:dev`` - Run with sandbox DB (ephemeral)
